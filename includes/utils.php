@@ -75,4 +75,52 @@
 
         return $attach_id;
     }
+
+
+    public function post_exists($title, $post_type, $meta_key = '', $meta_value = '') {
+        $args = array(
+            'title' => $title, // title
+            'post_type' => $post_type,  // post type
+            'post_status' => 'any', // any status
+            'meta_query' => array() // meta query
+        );
+
+        if (!empty($meta_key) && !empty($meta_value)) {
+            $args['meta_query'][] = array(
+                'key' => $meta_key, // meta key
+                'value' => $meta_value, // meta value
+                'compare' => '=' // compare
+            );
+        }
+
+        $query = new WP_Query($args); // create new WP_Query
+
+        if ($query->have_posts()) {
+            return $query->posts[0]->ID; // return post ID
+        }
+
+        return false; // return false
+    }
+
+    public function handle_post_thumbnail_and_meta($post_id, $post_data) {
+        if (isset($post_data['post_thumbnail'])) { // Check if post_thumbnail is set
+            $thumbnail = $post_data['post_thumbnail']; // Get the post_thumbnail value
+            if (filter_var($thumbnail, FILTER_VALIDATE_URL)) { // Check if the post_thumbnail is a URL
+                $attachment_id = $this->utils->upload_image_from_url($thumbnail); // Upload the image and get the attachment ID
+                if (!is_wp_error($attachment_id)) { // Check if the image was uploaded successfully
+                    set_post_thumbnail($post_id, $attachment_id); // Set the post thumbnail
+                }
+            } elseif (is_numeric($thumbnail)) {
+                set_post_thumbnail($post_id, intval($thumbnail)); // Set the post thumbnail
+            }
+        }
+    
+        if (!is_wp_error($post_id)) {
+            foreach ($post_data as $key => $value) {
+                if (!in_array($key, ['post_title', 'post_content', 'post_type'])) {
+                    update_post_meta($post_id, $key, $value);
+                }
+            }
+        }
+    }
  }

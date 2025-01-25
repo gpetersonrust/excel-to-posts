@@ -55,9 +55,7 @@ class ExcelToPostsAdminPage {
     }
 
     public function process_excel_file() {
-        if (empty($_FILES['excel_file']['tmp_name'])) {
-            wp_die('No file uploaded.');
-        }
+        if (empty($_FILES['excel_file']['tmp_name'])) wp_die('No file uploaded.');
 
         try {
             $spreadsheet = IOFactory::load($_FILES['excel_file']['tmp_name']);
@@ -65,42 +63,38 @@ class ExcelToPostsAdminPage {
             $header = array_shift($rows);
 
             foreach ($rows as $row) {
-                $post_data = array_combine($header, $row);
-                $post_id = wp_insert_post([
-                    'post_title'   => $post_data['post_title'],
-                    'post_content' => $post_data['post_content'],
-                    'post_type'    => $post_data['post_type'],
-                    'post_status'  => 'publish'
-                ]);
-
-
-                // Check if post_thumbnail is set
-
-            if (isset($post_data['post_thumbnail'])) { // Check if post_thumbnail is set
-                $thumbnail = $post_data['post_thumbnail']; // Get the post_thumbnail value
-                if (filter_var($thumbnail, FILTER_VALIDATE_URL)) { // Check if the post_thumbnail is a URL
-                    $attachment_id = $this->utils->upload_image_from_url($thumbnail); // Upload the image and get the attachment ID
-                    if (!is_wp_error($attachment_id)) { // Check if the image was uploaded successfully
-                        set_post_thumbnail($post_id, $attachment_id); // Set the post thumbnail
-                    }
-                } elseif (is_numeric($thumbnail)) {
-                    set_post_thumbnail($post_id, intval($thumbnail)); // Set the post thumbnail
-                } // 
-            }
-                 
-                if (!is_wp_error($post_id)) {
-                    foreach ($post_data as $key => $value) {
-                        if (!in_array($key, ['post_title', 'post_content', 'post_type'])) {
-                            update_post_meta($post_id, $key, $value);
-                        }
-                    }
-                }
+                $this->process_row($header, $row);
             }
 
-            wp_redirect(admin_url('admin.php?page=excels-to-posts'));
-            exit;
-        } catch (Exception $e) {
-            wp_die('Error: ' . $e->getMessage());
-        }
+        wp_redirect(admin_url('admin.php?page=excels-to-posts'));
+        exit;
+    } catch (Exception $e) {
+        wp_die('Error: ' . $e->getMessage());
     }
-} ?>
+}
+
+
+private function process_row($header, $row){
+    $post_data = array_combine($header, $row);
+                 
+
+    $args  = array(
+        'post_title' => $post_data['post_title'],
+        'post_content' => $post_data['post_content'],
+        'post_type' => $post_data['post_type'],
+        'post_thumbnail' => $post_data['post_thumbnail'], 
+        'post_status' => 'publish'
+    );
+
+    $post_id= $this->utils->post_exists($post_data['post_title'], $post_data['post_type']);
+
+    //  if there is a post_id update the post if not create a new post
+    $post_id = $post_id ? wp_update_post(array_merge($args, ['ID' => $post_id])) : wp_insert_post($args);
+   // Check if post_thumbnail is set
+
+$this->utils->handle_post_thumbnail_and_meta($post_id, $post_data);
+}
+
+
+}
+?>

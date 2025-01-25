@@ -50,4 +50,29 @@
         }
         return true;
     }
+
+
+
+    // upload_image_from_url( 
+    public function upload_image_from_url($url) {
+        $image = file_get_contents($url); // download image
+        $filename = basename($url); // get filename from url
+        $upload_dir = wp_upload_dir(); // get upload directory
+        $upload_path = $upload_dir['path'] . '/' . $filename; // create upload path
+        file_put_contents($upload_path, $image); // save image to upload path
+
+        $wp_filetype = wp_check_filetype($filename, null); // get file type
+        $attachment = array(  // create attachment array
+            'post_mime_type' => $wp_filetype['type'], // set mime type
+            'post_title' => sanitize_file_name($filename), // set title
+            'post_content' => '', // set content
+            'post_status' => 'inherit' // set status
+        );
+        $attach_id = wp_insert_attachment($attachment, $upload_path); // insert attachment
+        require_once(ABSPATH . 'wp-admin/includes/image.php'); // include image.php
+        $attach_data = wp_generate_attachment_metadata($attach_id, $upload_path); // generate attachment metadata
+        wp_update_attachment_metadata($attach_id, $attach_data); // update attachment metadata
+
+        return $attach_id;
+    }
  }

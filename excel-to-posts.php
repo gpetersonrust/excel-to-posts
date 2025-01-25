@@ -66,7 +66,7 @@ class ExcelToPostsInit {
         // Define the classes to be loaded
         $this->classes_to_run = [
             [
-                'file' => 'shortcodes/admin-page.php',
+                'file' => '/admin-page.php',
                 'class' => 'ExcelToPostsAdminPage',
                 'args' => [
                     'dir' => $this->dir,

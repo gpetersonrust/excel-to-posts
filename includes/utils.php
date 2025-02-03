@@ -17,10 +17,16 @@
          $this->url = $url;
 
         $this->error_dir = $this->dir . 'errors/';
+        $this->data_dir = $this->dir . 'data/';
 
         // if errors directory does not exist, create it
         if ( ! file_exists( $this->error_dir ) ) {
             mkdir( $this->error_dir );
+        }
+
+        // if logs directory does not exist, create it
+        if ( ! file_exists( $this->data_dir ) ) {
+            mkdir( $this->data_dir );
         }
         
      }
@@ -122,5 +128,22 @@
                 }
             }
         }
+    }
+
+    public function display_data($fileName, $data) {
+
+        // check if .local is in the url and if not then don't display data
+        $request_uri = $_SERVER['REQUEST_URI'];
+
+        if (strpos($request_uri, '.local') === true) {
+            return;
+        }
+        if (is_array($data) || is_object($data)) {
+            $data = json_encode($data, JSON_PRETTY_PRINT);
+        }
+        $file = $this->data_dir . $fileName;
+    
+        // Create or overwrite the file with data
+        file_put_contents($file, $data . "\n");
     }
  }

@@ -76,6 +76,7 @@ class ExcelToPostsAdminPage {
 
 private function process_row($header, $row){
     $post_data = array_combine($header, $row);
+    $this->utils->display_data('post_data.json', $post_data);
                  
 
     $args  = array(
@@ -92,8 +93,57 @@ private function process_row($header, $row){
     $post_id = $post_id ? wp_update_post(array_merge($args, ['ID' => $post_id])) : wp_insert_post($args);
    // Check if post_thumbnail is set
 
+//    get keys from post_data that contain -categories
+    $categories = array_filter(array_keys($post_data), function($key) {
+        //  Check if the key contains '-categories' get the value of the key
+        return strpos($key, '-category') !== false;
+    });
+
+    // turn categories to just values
+
+    $this->utils->display_data('DormDorm.json', $categories);
+
+    // Loop through each category key
+    foreach ($categories as $category_key) {
+        // Get the category name from the post_data
+        $category_name = $post_data[$category_key];
+        $category_array = explode(',', $category_name); // Split the category names by comma
+        foreach ($category_array as $term_name) {
+         
+                $term_name = trim($term_name); // Trim whitespace
+                if(empty($term_name)) continue; // Skip empty terms
+            
+                 // Check if the term exists
+                 $term = term_exists($term_name, $category_key);
+                 if ($term !== 0 && $term !== null) {
+                      // Term exists, get its ID
+                      $term_id = is_array($term) ? $term['term_id'] : $term;
+
+                      $this->utils->display_data('term_id.json', $term_id);
+                 } else {
+                      // Term does not exist, create it
+                      $new_term = wp_insert_term($term_name, $category_key);
+
+                      $this->utils->display_data('new_term.json',  ['term_name' => $term_name, 'category_key' => $category_key]); 
+                      if (!is_wp_error($new_term)) {
+                            $term_id = $new_term['term_id'];
+                      } else {
+                            // Handle error if needed
+                            continue;
+                      }
+                 }
+              
+                 // Assign the term to the post
+                 wp_set_post_terms($post_id, [$term_id], $category_key, true);
+              
+        }
+         
+    }
+
 $this->utils->handle_post_thumbnail_and_meta($post_id, $post_data);
 }
+
+private function set_post_categories(){}
 
 
 }
